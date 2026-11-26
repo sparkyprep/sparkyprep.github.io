@@ -1,12 +1,10 @@
 /* Sparky Prep. Laid out like a school learning platform (clear hero, big cards, progress you can
    see) but dressed for adults on a trade course: warm paper background, near-black ink, one
    confident blue for anything you can press, and safety-amber only for wins (streaks, XP, the
-   logo). Plus Jakarta Sans for words, JetBrains Mono for numbers and formulas.
+   logo). Plus Jakarta Sans throughout, with tabular figures so numbers line up.
    Spacing runs on a 4px scale; cards use one radius; shadows are soft and rare. */
 
 @font-face { font-family: "Plus Jakarta Sans"; src: url("../fonts/plus-jakarta-sans.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
-@font-face { font-family: "JetBrains Mono"; src: url("../fonts/jetbrains-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
-@font-face { font-family: "JetBrains Mono"; src: url("../fonts/jetbrains-mono-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
 
 :root {
   --bg: #f6f5f1;
@@ -29,7 +27,7 @@
   --bad: #b4441c;
   --bad-soft: #fbeae3;
   --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --r-sm: 8px;
   --r: 14px;
   --r-lg: 20px;
@@ -52,6 +50,7 @@
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
 html, body { overflow-x: clip; }
 body {
+  font-variant-numeric: tabular-nums;
   margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font);
   font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   display: flex; flex-direction: column; min-height: 100vh;
@@ -67,7 +66,7 @@ h3 { font-size: 1.1rem; font-weight: 700; }
 p { margin: 0; }
 .muted { color: var(--muted); }
 .dim { color: var(--dim); }
-.mono { font-family: var(--mono); font-feature-settings: "zero" 0; }
+.mono { font-family: var(--mono); }
 .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
 .narrow { max-width: 760px; }
 .skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 8px; z-index: 100; }
