@@ -14,6 +14,8 @@
   const dayDiff = (a, b) => Math.round((new Date(b + "T00:00") - new Date(a + "T00:00")) / 864e5);
   const DAY = 864e5;
   const KEYS = ["A", "B", "C", "D"];
+  const EXAM = { bank: 88, maths: 12, minutes: 180, pass: 60 };
+  const EXAM_N = EXAM.bank + EXAM.maths;
 
   // ------------------------------------------------------------------ progress
   const LS = "sparky-prep:v1";
@@ -149,8 +151,8 @@
 
   // ------------------------------------------------------------------ chrome (nav, footer, toast)
   function navLinks() {
-    if (!user && !P.answered && !STATIC) return [["#/", "Home", "bolt"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Units", "book"]];
-    return [["#/", "Dashboard", "chart"], ["#/units", "Units", "book"], ["#/maths", "Maths", "calc"], ["#/exam", "Mock exam", "clock"], ["#/progress", "Progress", "trophy"]];
+    if (!user && !P.answered && !STATIC) return [["#/", "Home", "bolt"], ["#/learn", "Learn", "book"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Practise", "target"]];
+    return [["#/", "Dashboard", "chart"], ["#/learn", "Learn", "book"], ["#/units", "Practise", "target"], ["#/maths", "Maths", "calc"], ["#/exam", "Mock exam", "clock"], ["#/progress", "Progress", "trophy"]];
   }
   function renderChrome() {
     $("#logo").innerHTML = logoMark(30);
@@ -226,7 +228,7 @@
         <ul class="facts">
           <li><b>${total}</b> written questions</li>
           <li><b>${Object.values(Maths.TOPICS).flat().length}</b> maths generators</li>
-          <li><b>40</b> question mock exam</li>
+          <li><b>${EXAM_N}</b> question mock exam</li>
         </ul>
       </div>
       <div class="sample ${u.tone}" id="demo">
@@ -353,7 +355,7 @@
 
       <div class="actions">
         ${action("#/maths", "calc", "Maths trainer", "Endless calculations with worked answers", "t4")}
-        ${action("#/exam", "clock", "Mock exam", "40 questions, timed, 60% to pass", "t5")}
+        ${action("#/exam", "clock", "Mock exam", `${EXAM_N} questions, 3 hours, 60% to pass`, "t5")}
         ${action("#/mistakes", "alert", "Mistakes", nMiss ? `${nMiss} to fix` : "Nothing to fix right now", "t8")}
         ${action("#/practice?mode=formula", "lightbulb", "Which formula?", "Pick the right formula, fast", "t3")}
       </div>
@@ -386,9 +388,10 @@
       <div class="page-head"><div class="unit-headline">
         <span class="unit-ic">${icon(u.icon, 24)}</span>
         <p class="unit-code">${esc(u.code)}</p><h1>${esc(u.name)}</h1><p class="muted">${esc(u.long)}</p></div>
-        <a class="btn btn-primary btn-lg" href="#/practice?mode=unit&unit=${id}">Practise this unit ${icon("arrow", 18)}</a>
+        <div class="head-actions"><a class="btn btn-ghost btn-lg" href="#/learn/${id}">${icon("book", 18)}Read the notes</a>
+        <a class="btn btn-primary btn-lg" href="#/practice?mode=unit&unit=${id}">Practise this unit ${icon("arrow", 18)}</a></div>
       </div>
-      ${u.partial ? `<div class="card notice">${icon("alert", 18)}<p>This unit is built from practice quizzes so far. More questions get added once the learner guide is in.</p></div>` : ""}
+      ${u.partial ? `<div class="card notice">${icon("alert", 18)}<p>Decommissioning and commissioning (modules 3A and 3B) aren't covered yet. They'll be added once you've done them in class.</p></div>` : ""}
       <div class="split">
         <div class="card">
           <div class="card-head"><h3>Topics</h3><span class="muted">${qs.length} questions</span></div>
@@ -489,10 +492,10 @@
       title = "Mixed practice";
     } else if (mode === "unit") {
       let pool = QB.forUnit(unit);
-      if (topic) pool = pool.filter((q) => q.topic === topic);
+      if (topic) { const ts = topic.split("|"); pool = pool.filter((q) => ts.includes(q.topic)); }
       const score = (q) => { const c = P.cards[q.id]; if (!c) return 1; if (c.due <= Date.now()) return 0; return 2 + c.b; };
       items = shuffle(pool).sort((a, b) => score(a) - score(b)).slice(0, 12).map(bankItem);
-      title = topic ? topic : QB.unit(unit)?.name || "Unit";
+      title = topic ? topic.split("|").join(" & ") : QB.unit(unit)?.name || "Unit";
     } else if (mode === "maths") {
       items = Array.from({ length: 10 }, () => mathsItem(topic));
       title = topic ? `Maths: ${topic}` : "Mixed maths";
@@ -500,18 +503,22 @@
       const seen = new Set();
       while (items.length < 10) { const f = mathsItem("Which formula?"); if (!seen.has(f.q) || seen.size > 12) { seen.add(f.q); items.push(f); } }
       title = "Which formula?";
+    } else if (mode === "flagged") {
+      items = shuffle(Object.keys(P.flags || {}).map((id) => QB.get(id)).filter(Boolean)).slice(0, 20).map(bankItem);
+      title = "Flagged from mock exams";
     } else if (mode === "mistakes") {
       items = shuffle(mistakes()).slice(0, 15).map(bankItem);
       title = "Fix your mistakes";
     } else if (mode === "exam") {
       exam = true;
-      const perUnit = QB.UNITS.map((u) => shuffle(QB.forUnit(u.id)).slice(0, 4)).flat();
-      const extra = shuffle(QB.all().filter((q) => !perUnit.includes(q))).slice(0, 34 - perUnit.length);
+      // 88 written questions spread across every unit, plus 12 generated maths questions
+      const perUnit = QB.UNITS.map((u) => shuffle(QB.forUnit(u.id)).slice(0, 9)).flat();
+      const extra = shuffle(QB.all().filter((q) => !perUnit.includes(q))).slice(0, EXAM.bank - perUnit.length);
       items = shuffle([...perUnit, ...extra]).map(bankItem);
-      for (let i = 0; i < 6; i++) items.splice(Math.floor(Math.random() * items.length), 0, mathsItem());
+      for (let i = 0; i < EXAM.maths; i++) items.splice(Math.floor(Math.random() * items.length), 0, mathsItem());
       title = "Mock exam";
     }
-    return { mode, title, items, i: 0, answers: [], exam, requeued: new Set(), start: Date.now(), xp0: P.xp, ends: exam ? Date.now() + 50 * 60_000 : null, picked: null, revealed: false };
+    return { mode, title, items, i: 0, answers: [], exam, requeued: new Set(), start: Date.now(), xp0: P.xp, ends: exam ? Date.now() + EXAM.minutes * 60_000 : null, picked: null, revealed: false };
   }
 
   function practice(params) {
@@ -525,17 +532,26 @@
     if (S.exam) tick();
   }
 
+  // Counts down from 3:00:00. When it reaches zero it keeps going into minus time instead of
+  // ending the exam, so you can finish and see how far over you went.
+  function clock(ms) {
+    const neg = ms < 0, t = Math.floor(Math.abs(ms) / 1000);
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    return `${neg ? "−" : ""}${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+  let ticking = null;
   function tick() {
+    clearTimeout(ticking);
     if (!S || !S.exam) return;
     const el = $("#timer");
-    const left = Math.max(0, S.ends - Date.now());
+    const left = S.ends - Date.now();
     if (el) {
-      const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
-      el.querySelector("span").textContent = `${m}:${String(s).padStart(2, "0")}`;
-      el.classList.toggle("low", left < 5 * 60_000);
+      el.querySelector("span").textContent = clock(left);
+      el.classList.toggle("low", left < 10 * 60_000 && left >= 0);
+      el.classList.toggle("over", left < 0);
+      el.title = left < 0 ? "Over time. In the real exam you'd be out of time." : "Time left";
     }
-    if (left <= 0) return finish();
-    setTimeout(tick, 1000);
+    ticking = setTimeout(tick, 1000);
   }
 
   function renderQ() {
@@ -549,7 +565,7 @@
       <div class="quiz-top">
         <a class="icon-btn" href="#/" aria-label="End session">${icon("x", 18)}</a>
         <div class="bar"><i data-w="${pct}"></i></div>
-        ${S.exam ? `<span class="timer" id="timer">${icon("clock", 16)}<span>50:00</span></span>` : ""}
+        ${S.exam ? `<span class="timer" id="timer">${icon("clock", 16)}<span>${clock(S.ends - Date.now())}</span></span>` : ""}
         <span class="quiz-count">${S.i + 1} / ${S.items.length}</span>
       </div>
       <div class="qcard">
@@ -564,7 +580,7 @@
       </div>
       <div class="quiz-foot">
         ${S.exam ? `<span class="kbd-hint">Answers are marked at the end. Pick one and move on.</span>` :
-        `<label class="toggle"><input type="checkbox" id="af" ${P.settings.answerFirst ? "checked" : ""}><span class="sw"></span>Answer first</label>`}
+        `<label class="toggle" title="Hides the four options until you tap, so you have to think of the answer yourself first"><input type="checkbox" id="af" ${P.settings.answerFirst ? "checked" : ""}><span class="sw"></span>Answer first (hide options)</label>`}
         <span class="kbd-hint">Keys <span class="kbd">1</span>–<span class="kbd">4</span> to answer, <span class="kbd">Enter</span> for next</span>
       </div>
     </div>`);
@@ -593,6 +609,7 @@
     S.answers.push({ it, chosen, right });
 
     if (it.kind === "bank") grade(it.id, right);
+    if (it.kind === "bank" && right && !S.exam && P.flags) delete P.flags[it.id];
     if (it.kind !== "bank") { P.maths.answered++; if (right) P.maths.correct++; }
     countAnswer(right);
 
@@ -624,6 +641,7 @@
       <h4>${icon(right ? "check" : "x", 18)}${right ? pickPraise() : `The answer is: ${esc(it.answerText)}`}</h4>
       ${it.explain ? `<p>${esc(it.explain)}</p>` : ""}${steps}${trap}
       ${!right && it.kind === "bank" ? `<p class="dim small-note">This one will come back later in this session and again tomorrow.</p>` : ""}
+      ${!right ? learnLinks(it) : ""}
     </div>
     <div class="quiz-foot"><span class="dim">${right ? "+10 XP" : "+2 XP for trying"}</span>
       <button class="btn btn-ink" data-act="next" id="nextBtn">${last ? "See results" : "Next question"} ${icon("arrow", 18)}</button></div>`;
@@ -638,62 +656,123 @@
     renderQ();
   }
 
+  // ------------------------------------------------------------------ where to learn more
+  // Finds the learning-area section (and the LearningHive module) that explains a question.
+  function learnFor(it) {
+    const units = it.unit ? [QB.unit(it.unit)] : QB.UNITS;
+    for (const u of units) {
+      const L = LEARN.units[u.learn || u.id];
+      if (!L) continue;
+      const sec = L.sections.find((x) => x.topics.includes(it.topic));
+      if (sec) return { unit: u, sec, href: `#/learn/${u.id}?s=${sec.id}` };
+    }
+    return null;
+  }
+  function learnLinks(it, small) {
+    const l = learnFor(it);
+    if (!l) return "";
+    return `<div class="learn-links ${small ? "sm" : ""}">
+      <a href="${l.href}">${icon("book", 15)}Read: ${esc(l.sec.title)}</a>
+      <a href="${l.sec.lms}" target="_blank" rel="noopener">${icon("arrow", 15)}Open in LearningHive</a></div>`;
+  }
+
   function finish() {
     if (!S) return;
+    clearTimeout(ticking);
     const answered = S.answers;
-    // In a timed exam anything unanswered counts as wrong
     const total = S.exam ? S.items.length : answered.length;
     const right = answered.filter((a) => a.right).length;
     const pct = total ? Math.round((right / total) * 100) : 0;
     const gained = P.xp - S.xp0;
     const misses = answered.filter((a) => !a.right);
-    if (S.exam) {
-      const pass = pct >= 60;
-      P.exams.push({ at: Date.now(), pct, right, total, mins: Math.round((Date.now() - S.start) / 60000) });
+    const secs = Math.round((Date.now() - S.start) / 1000);
+    const pass = pct >= EXAM.pass;
+    const exam = S.exam, mode = S.mode;
+    let over = 0;
+    if (exam) {
+      over = Math.max(0, Math.round((Date.now() - S.ends) / 60000));
+      // Score per unit, so you can see which unit is dragging you down
+      const byUnit = {};
+      for (const a of answered) {
+        const k = a.it.unit || "maths";
+        byUnit[k] ||= [0, 0];
+        byUnit[k][1]++;
+        if (a.right) byUnit[k][0]++;
+      }
+      // Flag what you got wrong. It stays flagged until you get it right in practice.
+      P.flags ||= {};
+      for (const m of misses) if (m.it.kind === "bank") P.flags[m.it.id] = Date.now();
+      P.exams.push({ at: Date.now(), pct, right, total, mins: Math.round(secs / 60), over, byUnit,
+        wrong: misses.map((m) => (m.it.kind === "bank" ? m.it.id : { q: m.it.q, a: m.it.answerText, topic: m.it.topic })) });
+      P.exams = P.exams.slice(-30);
       if (pass) P.xp += 50;
       checkBadges(); save(); renderChrome();
     }
-    const pass = pct >= 60;
-    const secs = Math.round((Date.now() - S.start) / 1000);
-    const exam = S.exam;
-    const mode = S.mode;
     S = null;
+    const h = Math.floor(secs / 3600), mm = Math.floor((secs % 3600) / 60), ss = secs % 60;
+    const time = h ? `${h}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : `${mm}:${String(ss).padStart(2, "0")}`;
     view(`<div class="quiz"><div class="qcard result">
       <div class="result-ic ${exam && !pass ? "fail" : ""}">${icon(exam ? (pass ? "trophy" : "alert") : "star", 34)}</div>
       <h1>${exam ? (pass ? "Pass" : "Not yet") : "Session done"}</h1>
-      <p class="muted">${exam ? (pass ? "That's a pass mark. Keep the reviews going so it holds." : "60% is the pass mark. Your mistakes are saved, so work through them and try again.") : "Your review schedule has been updated."}</p>
+      <p class="muted">${exam ? (pass ? "That's a pass mark. Keep the reviews going so it holds." : `${EXAM.pass}% is the pass mark. Everything you got wrong is flagged below with where to read up on it.`) : "Your review schedule has been updated."}</p>
       <p class="big">${pct}%</p><p class="muted">${right} of ${total} correct</p>
       <div class="result-row">
         <div class="metric"><p class="lbl">${icon("star", 16)}XP earned</p><b>+${gained + (exam && pass ? 50 : 0)}</b></div>
-        <div class="metric"><p class="lbl">${icon("clock", 16)}Time</p><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}</b></div>
+        <div class="metric ${over ? "over" : ""}"><p class="lbl">${icon("clock", 16)}Time</p><b>${time}</b>${exam ? `<small>${over ? `${over} min over the 3 hours` : "inside 3 hours"}</small>` : ""}</div>
         <div class="metric"><p class="lbl">${icon("flame", 16)}Streak</p><b>${streakNow()}</b></div>
       </div>
       <div class="result-ctas">
-        <a class="btn btn-primary" href="#/practice?mode=${mode === "exam" ? "mistakes" : mode === "review" ? "mixed" : mode}">${mode === "exam" ? "Fix mistakes" : "Keep going"}</a>
+        ${exam ? `<a class="btn btn-primary" href="#/exam">See all results</a>` : `<a class="btn btn-primary" href="#/practice?mode=${mode === "review" ? "mixed" : mode}">Keep going</a>`}
         <a class="btn btn-ghost" href="#/">Back to dashboard</a>
       </div>
-      ${misses.length ? `<div class="miss-list"><h3>Review these</h3>${misses.map((m) => `<div class="miss"><p>${esc(m.it.q)}</p>
-        <div class="ans">${icon("check", 16)}${esc(m.it.answerText)}</div>${m.it.explain ? `<p class="dim small-note">${esc(m.it.explain)}</p>` : ""}</div>`).join("")}</div>` : ""}
+      ${misses.length ? `<div class="miss-list"><h3>${exam ? `Flagged: ${misses.length} to work on` : "Review these"}</h3>${misses.map((m) => missHtml(m.it)).join("")}</div>` : ""}
     </div></div>`);
   }
+  function missHtml(it) {
+    return `<div class="miss"><p>${esc(it.q)}</p>
+      <div class="ans">${icon("check", 16)}${esc(it.answerText)}</div>${it.explain ? `<p class="dim small-note">${esc(it.explain)}</p>` : ""}${learnLinks(it, true)}</div>`;
+  }
 
-  // ------------------------------------------------------------------ exam intro, mistakes, progress
+  // ------------------------------------------------------------------ exam page: start + history
   function examPage() {
-    const last = P.exams.slice(-5).reverse();
+    const hist = P.exams.slice().reverse();
+    const best = hist.reduce((m, e) => Math.max(m, e.pct), 0);
+    const flagged = Object.keys(P.flags || {}).filter((id) => QB.get(id));
+    const last = hist[0];
+    const label = (k) => (k === "maths" ? "Maths" : QB.unit(k)?.name || k);
     view(`<div class="page"><div class="wrap narrow">
-      <div class="page-head"><div><h1>Mock exam</h1><p class="muted">Like the real capstone: four options per question, closed book, no feedback until the end.</p></div></div>
+      <div class="page-head"><div><h1>Mock exam</h1><p class="muted">Set up like the real capstone: ${EXAM_N} four-option questions, closed book, no feedback until the end.</p></div></div>
       <div class="card exam-card">
         <div class="metrics three">
-          <div class="metric"><p class="lbl">${icon("layers", 16)}Questions</p><b>40</b><small>all 8 units + maths</small></div>
-          <div class="metric"><p class="lbl">${icon("clock", 16)}Time</p><b>50 min</b><small>timer runs out = submit</small></div>
-          <div class="metric"><p class="lbl">${icon("target", 16)}Pass mark</p><b>60%</b><small>24 of 40</small></div>
+          <div class="metric"><p class="lbl">${icon("layers", 16)}Questions</p><b>${EXAM_N}</b><small>all 8 units + maths</small></div>
+          <div class="metric"><p class="lbl">${icon("clock", 16)}Time</p><b>3 hours</b><small>goes into minus if you run over</small></div>
+          <div class="metric"><p class="lbl">${icon("target", 16)}Pass mark</p><b>${EXAM.pass}%</b><small>${Math.ceil(EXAM_N * EXAM.pass / 100)} of ${EXAM_N}</small></div>
         </div>
-        <p class="muted exam-note">Have a calculator ready. Answers can't be changed once picked, so think first.</p>
+        <p class="muted exam-note">The real capstone picks 100 questions for each person from a bank of about 5,000, so expect different wording on the day. Have a calculator ready. Answers can't be changed once picked.</p>
         <a class="btn btn-ink btn-lg btn-block" href="#/practice?mode=exam">Start mock exam ${icon("arrow", 18)}</a>
       </div>
-      ${last.length ? `<div class="card"><div class="card-head"><h3>Recent attempts</h3></div><div class="list">${last.map((e) => `<div class="row"><div class="grow"><p>${new Date(e.at).toLocaleDateString("en-NZ", { day: "numeric", month: "short" })}</p><small>${e.right} of ${e.total} · ${e.mins} min</small></div>
-        <span class="tag ${e.pct >= 60 ? "blue" : ""}">${e.pct}% ${e.pct >= 60 ? "pass" : ""}</span></div>`).join("")}</div></div>` : ""}
+
+      ${hist.length ? `
+      <div class="card">
+        <div class="card-head"><h3>${icon("chart", 18)}Your results</h3><span class="muted">best ${best}%</span></div>
+        <div class="trend">${hist.slice(0, 12).reverse().map((e) => `<span class="trend-bar ${e.pct >= EXAM.pass ? "pass" : ""}" title="${e.pct}%"><i data-h="${e.pct}"></i><small>${e.pct}</small></span>`).join("")}<span class="trend-line" data-b="${EXAM.pass}"></span></div>
+        <div class="list">${hist.slice(0, 8).map((e) => `<div class="row"><div class="grow"><p>${new Date(e.at).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" })}</p>
+          <small>${e.right} of ${e.total} · ${e.mins} min${e.over ? ` · ${e.over} min over` : ""}</small></div>
+          <span class="tag ${e.pct >= EXAM.pass ? "ok" : "no"}">${e.pct}% ${e.pct >= EXAM.pass ? "pass" : "not yet"}</span></div>`).join("")}</div>
+      </div>
+      ${last.byUnit ? `<div class="card"><div class="card-head"><h3>${icon("layers", 18)}Last exam by unit</h3><span class="muted">weakest first</span></div>
+        <div class="list">${Object.entries(last.byUnit).sort((x, y) => x[1][0] / x[1][1] - y[1][0] / y[1][1]).map(([k, [r, t]]) => {
+          const u = QB.unit(k); const pc = Math.round((r / t) * 100);
+          return `<div class="row ${u ? u.tone : "t4"}"><span class="unit-ic sm">${icon(u ? u.icon : "calc", 16)}</span><div class="grow"><p>${esc(label(k))}</p><div class="bar thin"><i data-w="${pc}"></i></div></div>
+            <span class="score">${r}/${t}</span>${u ? `<a class="btn btn-ghost btn-sm" href="#/learn/${u.id}">Learn</a>` : `<a class="btn btn-ghost btn-sm" href="#/maths">Practise</a>`}</div>`;
+        }).join("")}</div></div>` : ""}` : ""}
+
+      ${flagged.length ? `<div class="card"><div class="card-head"><h3>${icon("alert", 18)}Flagged from mock exams</h3><a class="btn btn-primary btn-sm" href="#/practice?mode=flagged">Practise ${Math.min(20, flagged.length)}</a></div>
+        <p class="muted small-note">These clear once you get them right in practice.</p>
+        <div class="miss-list">${flagged.slice(0, 30).map((id) => missHtml(bankItem(QB.get(id)))).join("")}</div></div>` : ""}
     </div></div>`);
+    $$("[data-h]").forEach((el) => requestAnimationFrame(() => (el.style.height = el.dataset.h + "%")));
+    $$("[data-b]").forEach((el) => (el.style.bottom = `calc(${el.dataset.b}% * 0.8 + 22px)`));
   }
 
   function mistakesPage() {
@@ -701,11 +780,53 @@
     view(`<div class="page"><div class="wrap narrow">
       <div class="page-head"><div><h1>Mistakes</h1><p class="muted">Questions you got wrong last time. Get each one right to clear it.</p></div>
         ${list.length ? `<a class="btn btn-primary btn-lg" href="#/practice?mode=mistakes">Fix ${Math.min(15, list.length)} now</a>` : ""}</div>
-      <div class="card">${list.length ? `<div class="list">${list.map((q) => {
-        const u = QB.unit(q.unit);
-        return `<div class="row"><span class="unit-ic sm ${u.tone}">${icon(u.icon, 18)}</span><div class="grow"><p>${esc(q.q)}</p><small>${esc(u.code)} · ${esc(q.topic)}</small></div></div>`;
-      }).join("")}</div>` : `<div class="empty">${icon("check", 40)}<h3>All clear</h3><p>Anything you get wrong will show up here.</p></div>`}</div>
+      ${list.length ? `<div class="miss-list">${list.map((q) => missHtml(bankItem(q))).join("")}</div>`
+        : `<div class="card"><div class="empty">${icon("check", 40)}<h3>All clear</h3><p>Anything you get wrong will show up here.</p></div></div>`}
     </div></div>`);
+  }
+
+  // ------------------------------------------------------------------ learning area
+  function learnHome() {
+    view(`<div class="page"><div class="wrap">
+      <div class="page-head"><div><h1>Learn</h1><p class="muted">Short, plain-English notes for every module. Read one, then practise it straight away.</p></div>
+        <a class="btn btn-ghost" href="${LEARN.course}" target="_blank" rel="noopener">${icon("book", 18)}Full course on LearningHive</a></div>
+      <div class="learn-grid">${QB.UNITS.map((u) => {
+        const L = LEARN.units[u.learn || u.id];
+        return `<a class="learn-unit ${u.tone}" href="#/learn/${u.id}"><span class="unit-ic">${icon(u.icon, 22)}</span>
+          <div><p class="unit-code">${esc(u.code)}</p><h4>${esc(u.name)}</h4><small>${L.sections.length} modules</small></div>${icon("chevron", 18, "rail-go")}</a>`;
+      }).join("")}</div>
+    </div></div>`);
+  }
+
+  function learnUnit(id, focus) {
+    const u = QB.unit(id);
+    if (!u) return go("#/learn");
+    const L = LEARN.units[u.learn || u.id];
+    view(`<div class="page"><div class="wrap learn-wrap ${u.tone}">
+      <a href="#/learn" class="btn btn-quiet btn-sm">${icon("back", 16)}All units</a>
+      <div class="page-head"><div class="unit-headline"><span class="unit-ic">${icon(u.icon, 24)}</span><p class="unit-code">${esc(u.code)}</p><h1>${esc(u.name)}</h1><p class="muted">${esc(u.long)}</p></div>
+        <div class="head-actions"><a class="btn btn-primary" href="#/practice?mode=unit&unit=${u.id}">Practise this unit</a>
+        ${L.guide ? `<a class="btn btn-ghost" href="${L.guide}" target="_blank" rel="noopener">${icon("book", 18)}Learner guide (LearningHive)</a>` : ""}</div></div>
+      <div class="learn-layout">
+        <nav class="toc" aria-label="Modules">${L.sections.map((x) => `<a href="#/learn/${u.id}?s=${x.id}" data-sec="${x.id}">${esc(x.title)}</a>`).join("")}</nav>
+        <div class="lessons">${L.sections.map((x) => {
+          const qs = QB.forUnit(u.id).filter((q) => x.topics.includes(q.topic));
+          return `<article class="lesson" id="sec-${x.id}">
+            <h2>${esc(x.title)}</h2>
+            <p class="lesson-intro">${esc(x.intro)}</p>
+            ${x.points.length ? `<ul class="lesson-points">${x.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+            ${x.watch ? `<p class="lesson-watch">${icon("alert", 16)}<span><b>Watch out:</b> ${esc(x.watch)}</span></p>` : ""}
+            <div class="lesson-foot">
+              ${qs.length ? `<a class="btn btn-ink btn-sm" href="#/practice?mode=unit&unit=${u.id}&topic=${encodeURIComponent([...new Set(qs.map((q) => q.topic))].join("|"))}">Practise this (${qs.length})</a>` : ""}
+              <a class="btn btn-quiet btn-sm" href="${x.lms}" target="_blank" rel="noopener">Full lesson on LearningHive ${icon("arrow", 15)}</a>
+            </div></article>`;
+        }).join("")}</div>
+      </div>
+    </div></div>`);
+    if (focus) {
+      const el = $("#sec-" + focus);
+      if (el) { el.classList.add("focus"); setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
+    }
   }
 
   async function progressPage() {
@@ -853,6 +974,7 @@
       case "maths": return mathsPage();
       case "practice": return practice(params);
       case "exam": return examPage();
+      case "learn": return seg[1] ? learnUnit(seg[1], params.get("s")) : learnHome();
       case "mistakes": return mistakesPage();
       case "progress": return progressPage();
       case "account": return STATIC ? go("#/") : accountPage();

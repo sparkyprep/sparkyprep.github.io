@@ -11,7 +11,7 @@ window.QB = (function () {
     { id: "32611", code: "US 32611", name: "Magnetism & AC", long: "Magnetism, electromagnetism and AC theory", icon: "sine", tone: "t5" },
     { id: "32612", code: "US 32612", name: "Legislation & AS/NZS 3000", long: "Legislation, governance bodies and the Wiring Rules", icon: "scales", tone: "t6" },
     { id: "32613", code: "US 32613", name: "Cords, Cables & Installation", long: "Cords, cables and cable installation", icon: "cable", tone: "t7" },
-    { id: "faults", code: "Unit 8", name: "Faults & Protection", long: "Electrical faults, circuit protection, decommissioning and commissioning", icon: "breaker", tone: "t8", partial: true },
+    { id: "faults", learn: "32614", code: "US 32614", name: "Faults & Protection", long: "Electrical faults, circuit protection, decommissioning and commissioning", icon: "breaker", tone: "t8", partial: true },
   ];
 
   const questions = [];
@@ -25,9 +25,20 @@ window.QB = (function () {
     });
   }
 
+  // Adds questions after the ones already loaded for that unit, keeping earlier ids unchanged
+  function addMore(unit, list) {
+    const start = questions.filter((q) => q.unit === unit).length;
+    list.forEach(([q, options, explain, topic], i) => {
+      const item = { id: `${unit}-${start + i + 1}`, unit, q, options, explain, topic, kind: "bank" };
+      questions.push(item);
+      byId[item.id] = item;
+    });
+  }
+
   return {
     UNITS,
     add,
+    addMore,
     all: () => questions,
     get: (id) => byId[id],
     forUnit: (unit) => questions.filter((q) => q.unit === unit),
