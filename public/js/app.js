@@ -202,78 +202,100 @@
   const view = (html) => { const m = $("#main"); m.innerHTML = html; paint(m); window.scrollTo(0, 0); };
 
   // ------------------------------------------------------------------ landing
+  // Landing: a live sample question up top, the eight units as the way in, the review
+  // schedule drawn as a timeline, and a worked maths example. No marketing filler.
+  let demo = null;
   function landing() {
     const total = QB.all().length;
+    const startHref = STATIC ? "#/practice?mode=review" : "#/signup";
+    const startLabel = STATIC ? "Start practising" : "Create a free account";
+    const pool = QB.all().filter((q) => q.options.every((o) => o.length < 60));
+    const q = pool[Math.floor(Math.random() * pool.length)];
+    demo = { ...bankItem(q), picked: null };
+    const u = QB.unit(q.unit);
     view(`
-    <section class="hero"><div class="wrap hero-grid">
+    <section class="intro"><div class="wrap intro-grid">
+      <div class="intro-copy">
+        <p class="overline">NZ electrical pre-trade · capstone revision</p>
+        <h1>Ten questions a day.<br>Every unit covered.</h1>
+        <p class="lede">Practise all 8 capstone units in four-option questions, the same format as the exam. Anything you get wrong comes back until you've got it.</p>
+        <div class="intro-ctas">
+          <a class="btn btn-primary btn-lg" href="${startHref}">${startLabel} ${icon("arrow", 18)}</a>
+          ${STATIC ? "" : `<a class="btn btn-quiet btn-lg" href="#/practice?mode=mixed">Try it without an account</a>`}
+        </div>
+        <ul class="facts">
+          <li><b>${total}</b> written questions</li>
+          <li><b>${Object.values(Maths.TOPICS).flat().length}</b> maths generators</li>
+          <li><b>40</b> question mock exam</li>
+        </ul>
+      </div>
+      <div class="sample ${u.tone}" id="demo">
+        <div class="sample-head"><span class="sample-label">${icon("target", 16)}Try one now</span><span class="tag tone-tag">${esc(u.code)} · ${esc(q.topic)}</span></div>
+        <p class="sample-q">${esc(demo.q)}</p>
+        <div class="options">${demo.options.map((o, i) => `<button class="opt" data-act="demo" data-i="${i}"><span class="key">${KEYS[i]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+        <div id="demoFb"></div>
+      </div>
+    </div></section>
+
+    <section class="pick"><div class="wrap">
+      <div class="pick-head"><h2>Pick a unit</h2><p class="muted">Or start a mixed session and let it choose for you.</p></div>
+      <div class="unit-rail">${QB.UNITS.map((u, i) => `<a class="rail-item ${u.tone}" href="#/unit/${u.id}">
+        <span class="rail-no">${String(i + 1).padStart(2, "0")}</span>
+        <span class="unit-ic">${icon(u.icon, 20)}</span>
+        <span class="rail-text"><b>${esc(u.name)}</b><small>${esc(u.code)} · ${QB.forUnit(u.id).length} questions</small></span>
+        ${icon("chevron", 18, "rail-go")}</a>`).join("")}</div>
+    </div></section>
+
+    <section class="method"><div class="wrap">
+      <div class="method-grid">
+        <div>
+          <h2>Why one question keeps coming back</h2>
+          <p class="muted">Each question has its own schedule. Get it right and the gap before you see it again gets longer. Get it wrong and it's back tomorrow. Over a few weeks the hard ones get the most practice and the easy ones stay out of your way.</p>
+        </div>
+        <ol class="timeline" aria-label="Review gaps after each correct answer">
+          ${[["Today", "First try"], ["1 day", "Right once"], ["3 days", "Right twice"], ["1 week", "Mastered"], ["2 weeks", ""], ["1 month", ""]].map(([t, n], i) =>
+            `<li class="${i === 3 ? "key" : ""}"><span class="tl-dot"></span><b>${t}</b>${n ? `<small>${n}</small>` : ""}</li>`).join("")}
+        </ol>
+      </div>
+    </div></section>
+
+    <section class="mathsdemo"><div class="wrap mathsdemo-grid">
+      <div class="worked">
+        <p class="worked-q">Three resistors of 20 Ω, 30 Ω and 60 Ω in parallel. Total resistance?</p>
+        <div class="worked-lines">
+          <p><span>1</span>1/Rₜ = 1/20 + 1/30 + 1/60</p>
+          <p><span>2</span>= 0.05 + 0.0333 + 0.0167 = 0.1</p>
+          <p><span>3</span>Flip it: Rₜ = 1 ÷ 0.1</p>
+          <p class="ans"><span>${icon("check", 14)}</span>Rₜ = 10 Ω</p>
+        </div>
+        <p class="worked-trap">${icon("alert", 16)}Picked 0.1 Ω? That's the answer if you forget to flip.</p>
+      </div>
       <div>
-        <span class="eyebrow"><span class="dot">${icon("bolt", 14)}</span>For the NZ electrical pre-trade capstone</span>
-        <h1>Walk into your capstone <em>ready</em>.</h1>
-        <p class="lede">Short daily practice across all 8 units. The questions you get wrong come back until they stick, and the maths trainer shows every step.</p>
-        <div class="hero-ctas">
-          ${STATIC ? `<a class="btn btn-primary btn-lg" href="#/practice?mode=review">Start practising ${icon("arrow", 18)}</a>
-          <a class="btn btn-ghost btn-lg" href="#/maths">Maths trainer</a>` : `<a class="btn btn-primary btn-lg" href="#/signup">Create a free account ${icon("arrow", 18)}</a>
-          <a class="btn btn-ghost btn-lg" href="#/practice?mode=mixed">Try 10 questions</a>`}
-        </div>
-        <p class="hero-note">${icon("lock", 16)}${STATIC ? "No sign-up needed. Your progress saves in this browser." : "Just a username and password. No email needed."}</p>
-      </div>
-      <div class="preview" aria-hidden="true">
-        <div class="preview-card">
-          <div class="preview-top"><span class="tag blue">US 32610 · Parallel circuits</span><span class="mono dim">7 / 10</span></div>
-          <p class="qtext">Three resistors of 20 Ω, 30 Ω and 60 Ω are connected in parallel. What is the total resistance?</p>
-          <div class="options">
-            <div class="opt math faded"><span class="key">A</span>110 Ω</div>
-            <div class="opt math right"><span class="key">B</span>10 Ω<span class="mark">${icon("check", 18)}</span></div>
-            <div class="opt math faded"><span class="key">C</span>0.1 Ω</div>
-          </div>
-          <div class="workings"><span class="f">1/Rₜ = 1/20 + 1/30 + 1/60</span><br>= 0.05 + 0.0333 + 0.0167 = 0.1<br>FLIP: Rₜ = 1 ÷ 0.1 = 10 Ω</div>
-        </div>
-        <div class="preview-float a"><span class="float-ic t4">${icon("flame", 18)}</span>6-day streak</div>
-        <div class="preview-float b"><span class="float-ic t2">${icon("review", 18)}</span>4 cards due today</div>
+        <h2>Maths with the working shown</h2>
+        <p class="muted">Ohm's law, power, series and parallel, energy cost, efficiency, AC values. The numbers change every time, so you can't just memorise answers. The wrong options are the real mistakes people make.</p>
+        <a class="btn btn-ghost" href="#/maths">${icon("calc", 18)}Open the maths trainer</a>
       </div>
     </div></section>
 
-    <section class="band alt"><div class="wrap">
-      <div class="section-head"><p class="kicker">How it works</p><h2>Study the way memory actually works</h2>
-        <p>Re-reading notes feels productive but doesn't stick. Testing yourself and spacing it out does, so the whole site is built around those two ideas.</p></div>
-      <div class="steps">
-        <div class="step"><div class="step-ic">${icon("target", 24)}</div><p class="num">01</p><h3>Answer first</h3><p>Every question is four-option, like the real capstone. Turn on "answer first" to hide the options until you've thought of the answer.</p></div>
-        <div class="step"><div class="step-ic">${icon("review", 24)}</div><p class="num">02</p><h3>Review what's due</h3><p>Get one wrong and it comes back tomorrow. Get it right and the gap grows: 3 days, a week, a month.</p></div>
-        <div class="step"><div class="step-ic">${icon("shuffle", 24)}</div><p class="num">03</p><h3>Mix it up</h3><p>Mixed sets make you work out which formula or rule applies, which is the part the exam actually tests.</p></div>
-      </div>
-    </div></section>
-
-    <section class="band"><div class="wrap">
-      <div class="section-head"><p class="kicker">What's covered</p><h2>All 8 capstone units</h2><p>Questions written from the learner guides and class notes, each with an explanation of why the answer is right.</p></div>
-      <div class="units">${QB.UNITS.map(unitCard).join("")}</div>
-    </div></section>
-
-    <section class="band alt"><div class="wrap">
-      <div class="stats">
-        <div class="stat"><b>${total}</b><span>written questions with explanations</span></div>
-        <div class="stat"><b>${Object.values(Maths.TOPICS).flat().length}</b><span>maths question types, new numbers every time</span></div>
-        <div class="stat"><b>40</b><span>question timed mock exam, 60% to pass</span></div>
-        <div class="stat"><b>$0</b><span>free for everyone in the class</span></div>
-      </div>
-    </div></section>
-
-    <section class="band"><div class="wrap">
-      <div class="section-head"><p class="kicker">Questions</p><h2>Good to know</h2></div>
-      <div class="faq">
-        ${faq("Is this the real capstone?", "No. It's practice built from the course learner guides. The capstone is set by the industry body, so expect different questions on the same topics.")}
-        ${STATIC ? faq("Where is my progress saved?", "In this browser on this device. Use the same browser each time. Clearing your browser data resets it. Accounts that sync across devices are coming.")
-          : faq("Do I need an email?", "No, just a username and password. There's no email, which also means there's no password reset, so pick something you'll remember.") +
-            faq("Can I use it without an account?", "Yes. Your progress saves on this device. Make an account to keep it across your phone and laptop. Your progress comes with you when you sign up.") +
-            faq("Will other people see my results?", "Only if you turn on the class leaderboard in your account. It shows your username, XP and streak, nothing else.")}
-      </div>
-    </div></section>
-
-    <section class="band"><div class="wrap"><div class="cta-band">
-      <div><h2>Ten questions a day is enough</h2><p>About five minutes. Do it every day and the spacing does the rest.</p></div>
-      <a class="btn btn-primary btn-lg" href="${STATIC ? "#/practice?mode=review" : "#/signup"}">Start now ${icon("arrow", 18)}</a>
-    </div></div></section>`);
+    <section class="closer"><div class="wrap closer-in">
+      <p><b>${STATIC ? "No sign-up." : "Free."}</b> ${STATIC ? "Your progress saves in this browser." : "Just a username and password. No email."}</p>
+      <a class="btn btn-ink" href="${startHref}">${startLabel} ${icon("arrow", 18)}</a>
+    </div></section>`);
   }
-  const faq = (q, a) => `<details><summary>${esc(q)}${icon("chevron", 18)}</summary><p>${esc(a)}</p></details>`;
+
+  function demoPick(i) {
+    if (!demo || demo.picked !== null) return;
+    demo.picked = i;
+    const right = demo.options[i] === demo.answerText;
+    $$("#demo .opt").forEach((b, j) => {
+      b.disabled = true;
+      if (demo.options[j] === demo.answerText) b.classList.add("right");
+      else if (j === i) b.classList.add("wrong");
+      else b.classList.add("faded");
+    });
+    $("#demoFb").innerHTML = `<div class="feedback ${right ? "good" : "bad"}"><h4>${icon(right ? "check" : "x", 18)}${right ? "Correct" : "Not quite"}</h4><p>${esc(demo.explain)}</p></div>
+      <div class="sample-next"><button class="btn btn-quiet btn-sm" data-act="demoNew">${icon("shuffle", 16)}Another one</button><a class="btn btn-primary btn-sm" href="#/practice?mode=mixed">Do a full set</a></div>`;
+  }
 
   function unitCard(u) {
     const n = QB.forUnit(u.id).length;
@@ -798,6 +820,8 @@
     if (!el) return;
     const a = el.dataset.act;
     if (a === "pick") pick(+el.dataset.i);
+    else if (a === "demo") demoPick(+el.dataset.i);
+    else if (a === "demoNew") landing();
     else if (a === "next") next();
     else if (a === "reveal") reveal();
     else if (a === "logout") logout();
