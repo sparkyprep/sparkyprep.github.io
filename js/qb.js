@@ -28,17 +28,24 @@ window.QB = (function () {
   // Adds questions after the ones already loaded for that unit, keeping earlier ids unchanged
   function addMore(unit, list) {
     const start = questions.filter((q) => q.unit === unit).length;
-    list.forEach(([q, options, explain, topic], i) => {
+    return list.map(([q, options, explain, topic], i) => {
       const item = { id: `${unit}-${start + i + 1}`, unit, q, options, explain, topic, kind: "bank" };
       questions.push(item);
       byId[item.id] = item;
+      return item.id;
     });
   }
+  // Questions the tutor says are very likely to come up in the capstone
+  const must = new Set();
+  function markMust(ids) { ids.forEach((id) => must.add(id)); }
 
   return {
     UNITS,
     add,
     addMore,
+    markMust,
+    isMust: (id) => must.has(id),
+    mustList: () => questions.filter((q) => must.has(q.id)),
     all: () => questions,
     get: (id) => byId[id],
     forUnit: (unit) => questions.filter((q) => q.unit === unit),

@@ -480,3 +480,30 @@ a.unit:hover { border-color: var(--line-2); transform: translateY(-2px); box-sha
   .toc a { white-space: nowrap; border-left: 0; border-bottom: 2px solid transparent; margin: 0 0 -2px; }
   .lesson { padding: 20px; }
 }
+
+/* ---------- must-know ---------- */
+.tag.must { background: var(--amber-soft); color: var(--amber-ink); }
+.must-banner { display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 20px; border-radius: var(--r-lg); background: var(--amber-soft); border: 1px solid #f1dea0; color: var(--ink); text-decoration: none; }
+.must-banner > span:nth-child(2) { flex: 1; display: grid; }
+.must-banner small { color: var(--amber-ink); font-size: .88rem; }
+.must-banner:hover .rail-go { transform: translateX(3px); color: var(--amber-ink); }
+.must-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--amber); color: var(--ink); flex: none; }
+.must-progress { margin-bottom: 20px; }
+.must-progress .bar > i { background: var(--amber); }
+.must-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.must-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 8px; }
+.must-card::before { content: ""; position: absolute; left: 20px; top: 0; width: 28px; height: 3px; background: var(--tone); border-radius: 0 0 3px 3px; }
+.must-no { font-size: .78rem; font-weight: 700; color: var(--dim); }
+.must-card h3 { font-size: 1.02rem; }
+.must-card p { color: var(--ink-2); flex: 1; }
+.must-card a { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; font-size: .88rem; text-decoration: none; margin-top: 4px; }
+.must-note { margin-top: 18px; }
+.mustland { padding: 64px 0; }
+.mustland-in { display: grid; grid-template-columns: .8fr 1.2fr; gap: 56px; align-items: center; }
+.mustland h2 { margin-bottom: 12px; }
+.mustland .muted { margin-bottom: 22px; }
+.mustland-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.mustland-list li { display: grid; gap: 2px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.mustland-list span { color: var(--muted); font-size: .92rem; }
+@media (max-width: 1020px) { .must-grid { grid-template-columns: 1fr 1fr; } .mustland-in { grid-template-columns: 1fr; gap: 28px; } }
+@media (max-width: 560px) { .must-grid, .mustland-list { grid-template-columns: 1fr; } }

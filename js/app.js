@@ -248,6 +248,13 @@
         ${icon("chevron", 18, "rail-go")}</a>`).join("")}</div>
     </div></section>
 
+    <section class="mustland"><div class="wrap mustland-in">
+      <div><p class="overline">Straight from class</p><h2>The must-know list</h2>
+        <p class="muted">${MUSTKNOW.length} facts our tutor says are very likely to be in the real capstone: fire extinguishers, lockout, prove–test–prove, RCDs, crimp colours and more.</p>
+        <a class="btn btn-ink" href="#/must-know">${icon("star", 18)}See the list</a></div>
+      <ul class="mustland-list">${MUSTKNOW.slice(0, 6).map((f) => `<li><b>${esc(f.title)}</b><span>${esc(f.fact)}</span></li>`).join("")}</ul>
+    </div></section>
+
     <section class="method"><div class="wrap">
       <div class="method-grid">
         <div>
@@ -353,6 +360,7 @@
         </div>
       </div>
 
+      ${mustBanner()}
       <div class="actions">
         ${action("#/maths", "calc", "Maths trainer", "Endless calculations with worked answers", "t4")}
         ${action("#/exam", "clock", "Mock exam", `${EXAM_N} questions, 3 hours, 60% to pass`, "t5")}
@@ -503,6 +511,9 @@
       const seen = new Set();
       while (items.length < 10) { const f = mathsItem("Which formula?"); if (!seen.has(f.q) || seen.size > 12) { seen.add(f.q); items.push(f); } }
       title = "Which formula?";
+    } else if (mode === "must") {
+      items = shuffle(QB.mustList()).map(bankItem);
+      title = "Must-know";
     } else if (mode === "flagged") {
       items = shuffle(Object.keys(P.flags || {}).map((id) => QB.get(id)).filter(Boolean)).slice(0, 20).map(bankItem);
       title = "Flagged from mock exams";
@@ -512,7 +523,8 @@
     } else if (mode === "exam") {
       exam = true;
       // 88 written questions spread across every unit, plus 12 generated maths questions
-      const perUnit = QB.UNITS.map((u) => shuffle(QB.forUnit(u.id)).slice(0, 9)).flat();
+      const must = shuffle(QB.mustList()).slice(0, 10);
+      const perUnit = [...must, ...QB.UNITS.map((u) => shuffle(QB.forUnit(u.id).filter((q) => !must.includes(q))).slice(0, 8)).flat()];
       const extra = shuffle(QB.all().filter((q) => !perUnit.includes(q))).slice(0, EXAM.bank - perUnit.length);
       items = shuffle([...perUnit, ...extra]).map(bankItem);
       for (let i = 0; i < EXAM.maths; i++) items.splice(Math.floor(Math.random() * items.length), 0, mathsItem());
@@ -572,6 +584,7 @@
         <div class="qmeta">
           ${u ? `<span class="tag ${u.tone} tone-tag">${esc(u.code)}</span>` : `<span class="tag blue">${icon(it.kind === "formula" ? "lightbulb" : "calc", 12)}&nbsp;Maths</span>`}
           <span class="tag">${esc(it.topic)}</span>
+          ${!S.exam && it.kind === "bank" && QB.isMust(it.id) ? `<span class="tag must">${icon("star", 12)}&nbsp;Likely in capstone</span>` : ""}
           ${!S.exam && it.kind === "bank" && !P.cards[it.id] ? `<span class="tag amber">New</span>` : ""}
         </div>
         <p class="qtext">${esc(it.q)}</p>
@@ -785,11 +798,32 @@
     </div></div>`);
   }
 
+  // ------------------------------------------------------------------ must-know
+  const mustBanner = () => `<a class="must-banner" href="#/must-know"><span class="must-ic">${icon("star", 20)}</span>
+    <span><b>Must-know for the capstone</b><small>${MUSTKNOW.length} facts our tutor says are very likely to come up</small></span>${icon("chevron", 18, "rail-go")}</a>`;
+
+  function mustPage() {
+    const n = QB.mustList().length;
+    const done = QB.mustList().filter((q) => (P.cards[q.id]?.b || 0) >= MASTERED).length;
+    view(`<div class="page"><div class="wrap">
+      <div class="page-head"><div><h1>Must-know</h1><p class="muted">Our tutor says these are <b>very likely to be in the real capstone</b>. Know every one of them cold.</p></div>
+        <a class="btn btn-primary btn-lg" href="#/practice?mode=must">${icon("star", 18)}Practise all ${n}</a></div>
+      <div class="card must-progress"><div class="ready-top"><span>Must-know questions mastered</span><b>${done} / ${n}</b></div><div class="bar"><i data-w="${Math.round((done / n) * 100)}"></i></div></div>
+      <div class="must-grid">${MUSTKNOW.map((f, i) => {
+        const u = QB.unit(f.unit);
+        return `<div class="must-card ${u.tone}"><span class="must-no">${String(i + 1).padStart(2, "0")}</span><h3>${esc(f.title)}</h3><p>${esc(f.fact)}</p>
+          <a href="#/learn/${u.id}?s=${f.s}">${icon("book", 15)}Read more</a></div>`;
+      }).join("")}</div>
+      <p class="dim small-note must-note">From our tutor's guidance in class. The real exam picks questions at random, so learn everything else too.</p>
+    </div></div>`);
+  }
+
   // ------------------------------------------------------------------ learning area
   function learnHome() {
     view(`<div class="page"><div class="wrap">
       <div class="page-head"><div><h1>Learn</h1><p class="muted">Short, plain-English notes for every module. Read one, then practise it straight away.</p></div>
         <a class="btn btn-ghost" href="${LEARN.course}" target="_blank" rel="noopener">${icon("book", 18)}Full course on LearningHive</a></div>
+      ${mustBanner()}
       <div class="learn-grid">${QB.UNITS.map((u) => {
         const L = LEARN.units[u.learn || u.id];
         return `<a class="learn-unit ${u.tone}" href="#/learn/${u.id}"><span class="unit-ic">${icon(u.icon, 22)}</span>
@@ -974,6 +1008,7 @@
       case "maths": return mathsPage();
       case "practice": return practice(params);
       case "exam": return examPage();
+      case "must-know": return mustPage();
       case "learn": return seg[1] ? learnUnit(seg[1], params.get("s")) : learnHome();
       case "mistakes": return mistakesPage();
       case "progress": return progressPage();
