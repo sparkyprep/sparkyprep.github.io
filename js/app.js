@@ -897,11 +897,11 @@
     view(`<div class="page"><div class="wrap narrow">
       <div class="page-head"><div><h1>Resources</h1><p class="muted">The documents you study from, all in one place.</p></div></div>
 
-      <a class="res-feature" href="https://www.ewrb.govt.nz/licences/licence-information/access-nz-standards-for-all-electrical-installations-and-appliances/" target="_blank" rel="noopener">
+      <a class="res-feature" href="https://mega.nz/file/3G4WjbaB#_W3a1EClhsyKQP6DY6uYmm2GRlfYjqe5PpoM7uYVTjU" target="_blank" rel="noopener">
         <span class="res-ic big">${icon("book", 24)}</span>
         <span class="grow"><small class="overline-sm">Start here</small><b>AS/NZS 3000:2018, the Wiring Rules</b>
-        <small>Free for trainees through the EWRB. The link opens their page; follow the steps there to get your own copy. This is the edition the course assessments use.</small></span>
-        <span class="btn btn-primary">Get it free from EWRB ${icon("arrow", 16)}</span></a>
+        <small>For our class only. The download asks for a password: get it from your classmates or tutor. Not in our class? Trainees can read it free through the EWRB (link below).</small></span>
+        <span class="btn btn-primary">Download ${icon("arrow", 16)}</span></a>
 
       <div class="card res-card"><div class="card-head"><h3>Learner guides (PDF)</h3><span class="muted">needs your LearningHive login</span></div>
         <div class="res-list">${guides.map(([n, t, id]) => row("book", `US ${n}`, t, dl(id), "Download")).join("")}</div>
