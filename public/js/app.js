@@ -184,14 +184,15 @@
       return `<a href="${href}" class="${on ? "on" : ""}">${icon(ic, 18)}${label}</a>`;
     }).join("");
     const s = streakNow();
-    $("#navRight").innerHTML = STATIC
+    const themeBtn = `<button class="icon-btn theme-btn" data-act="theme" aria-label="Switch to ${document.documentElement.dataset.theme === "dark" ? "light" : "dark"} mode" title="Light / dark mode">${icon("sun", 19, "sun")}${icon("moon", 18, "moon")}</button>`;
+    $("#navRight").innerHTML = themeBtn + (STATIC
       ? `<span class="chip-stat streak ${s ? "hot" : ""}" title="Day streak">${icon("flame", 16)}${s}</span>
          <span class="chip-stat xp" title="Experience points">${icon("star", 16)}${P.xp.toLocaleString()}</span>`
       : user
       ? `<span class="chip-stat streak ${s ? "hot" : ""}" title="Day streak">${icon("flame", 16)}${s}</span>
          <span class="chip-stat xp" title="Experience points">${icon("star", 16)}${P.xp.toLocaleString()}</span>
          <a class="icon-btn" href="#/account" aria-label="Your account">${icon("user", 18)}</a>`
-      : `<a class="btn btn-quiet btn-sm" href="#/login">Log in</a><a class="btn btn-primary btn-sm" href="#/signup">Sign up free</a>`;
+      : `<a class="btn btn-quiet btn-sm" href="#/login">Log in</a><a class="btn btn-primary btn-sm" href="#/signup">Sign up free</a>`);
     $("#menuBtn").innerHTML = icon("menu", 20);
     $("#footer").innerHTML = `<div class="wrap footer-in">
       <span class="brand-name">Sparky<span>Prep</span></span>
@@ -1066,6 +1067,16 @@
     else if (a === "next") next();
     else if (a === "reveal") reveal();
     else if (a === "logout") logout();
+    else if (a === "theme") {
+      const root = document.documentElement;
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      root.classList.add("theme-anim");
+      root.dataset.theme = next;
+      try { localStorage.setItem("sparky-prep:theme", next); } catch {}
+      el.setAttribute("aria-label", `Switch to ${next === "dark" ? "light" : "dark"} mode`);
+      $('meta[name="theme-color"]').setAttribute("content", next === "dark" ? "#0e1116" : "#121826");
+      setTimeout(() => root.classList.remove("theme-anim"), 400);
+    }
     else if (a === "tab") go("#/" + el.dataset.to);
     else if (a === "goal") { P.goal = +el.dataset.n; save(); accountPage(); toast("Daily goal updated"); }
     else if (a === "showpw") { const i = $("#pw"); const show = i.type === "password"; i.type = show ? "text" : "password"; el.innerHTML = icon(show ? "eyeoff" : "eye", 18); }
