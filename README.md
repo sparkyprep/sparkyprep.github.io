@@ -53,4 +53,4 @@ gcloud run deploy sparky-prep --source . --region $REGION --allow-unauthenticate
   --max-instances=1 --memory=256Mi --set-env-vars STORAGE_BUCKET=$PROJECT-data
 ```
 
-Fonts: Plus Jakarta Sans and JetBrains Mono, both SIL Open Font License (see `public/fonts/`).
+Font: Plus Jakarta Sans, SIL Open Font License (see `public/fonts/`).
