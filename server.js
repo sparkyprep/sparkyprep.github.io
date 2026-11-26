@@ -177,10 +177,6 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true });
   }
 
-  if (route === "GET /api/leaderboard") {
-    return send(res, 200, { board: store.leaderboard(20) });
-  }
-
   return send(res, 404, { error: "not_found" });
 }
 

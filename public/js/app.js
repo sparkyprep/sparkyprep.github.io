@@ -14,6 +14,28 @@
   const dayDiff = (a, b) => Math.round((new Date(b + "T00:00") - new Date(a + "T00:00")) / 864e5);
   const DAY = 864e5;
   const KEYS = ["A", "B", "C", "D"];
+  const CAPSTONE_AT = Date.parse("2026-12-07T08:00:00+13:00");
+  function countdownParts() {
+    const ms = CAPSTONE_AT - Date.now();
+    if (ms <= 0) return null;
+    const t = Math.floor(ms / 1000);
+    return { d: Math.floor(t / 86400), h: Math.floor((t % 86400) / 3600), m: Math.floor((t % 3600) / 60), s: t % 60 };
+  }
+  function countdownHtml(big) {
+    const c = countdownParts();
+    if (!c) return `<div class="countdown done ${big ? "big" : ""}">${icon("bolt", 18)}<span>It's capstone day. Good luck!</span></div>`;
+    const cell = (v, l, k) => `<span class="cd-cell"><b data-cd="${k}">${String(v).padStart(k === "d" ? 1 : 2, "0")}</b><small>${l}</small></span>`;
+    return `<div class="countdown ${big ? "big" : ""}" data-countdown>
+      <span class="cd-label">${icon("clock", 18)}<span><b>Capstone</b><small>Mon 7 Dec, 8:00 am</small></span></span>
+      <span class="cd-cells">${cell(c.d, "days", "d")}${cell(c.h, "hrs", "h")}${cell(c.m, "min", "m")}${cell(c.s, "sec", "s")}</span></div>`;
+  }
+  setInterval(() => {
+    const els = $$("[data-countdown]");
+    if (!els.length) return;
+    const c = countdownParts();
+    if (!c) { els.forEach((el) => (el.outerHTML = countdownHtml(el.classList.contains("big")))); return; }
+    els.forEach((el) => { for (const k of ["d", "h", "m", "s"]) { const b = el.querySelector(`[data-cd="${k}"]`); if (b) b.textContent = String(c[k]).padStart(k === "d" ? 1 : 2, "0"); } });
+  }, 1000);
   const EXAM = { bank: 88, maths: 12, minutes: 180, pass: 60 };
   const EXAM_N = EXAM.bank + EXAM.maths;
 
@@ -21,7 +43,7 @@
   const LS = "sparky-prep:v1";
   const fresh = () => ({
     v: 1, xp: 0, answered: 0, correct: 0, cards: {}, days: {}, streak: { count: 0, last: null, best: 0 },
-    goal: 10, settings: { answerFirst: false, leaderboard: false }, badges: {}, exams: [], maths: { answered: 0, correct: 0 }, run: 0, bestRun: 0,
+    goal: 10, settings: { answerFirst: false }, badges: {}, exams: [], maths: { answered: 0, correct: 0 }, run: 0, bestRun: 0,
   });
   let P = load();
   let user = null;
@@ -151,8 +173,8 @@
 
   // ------------------------------------------------------------------ chrome (nav, footer, toast)
   function navLinks() {
-    if (!user && !P.answered && !STATIC) return [["#/", "Home", "bolt"], ["#/learn", "Learn", "book"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Practise", "target"]];
-    return [["#/", "Dashboard", "chart"], ["#/learn", "Learn", "book"], ["#/units", "Practise", "target"], ["#/maths", "Maths", "calc"], ["#/exam", "Mock exam", "clock"], ["#/progress", "Progress", "trophy"]];
+    if (!user && !P.answered && !STATIC) return [["#/", "Home", "bolt"], ["#/learn", "Learn", "book"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Practise", "target"], ["#/resources", "Resources", "layers"]];
+    return [["#/", "Dashboard", "chart"], ["#/learn", "Learn", "book"], ["#/units", "Practise", "target"], ["#/maths", "Maths", "calc"], ["#/exam", "Mock exam", "clock"], ["#/progress", "Progress", "trophy"], ["#/resources", "Resources", "layers"]];
   }
   function renderChrome() {
     $("#logo").innerHTML = logoMark(30);
@@ -218,6 +240,7 @@
     view(`
     <section class="intro"><div class="wrap intro-grid">
       <div class="intro-copy">
+        ${countdownHtml(false)}
         <p class="overline">NZ electrical pre-trade · capstone revision</p>
         <h1>Ten questions a day.<br>Every unit covered.</h1>
         <p class="lede">Practise all 8 capstone units in four-option questions, the same format as the exam. Anything you get wrong comes back until you've got it.</p>
@@ -335,6 +358,7 @@
     view(`<div class="page"><div class="wrap">
       <div class="page-head"><div><h1>${hello}${user ? ", " + esc(user.username) : ""}</h1>
         <p class="muted">${goalDone ? "Daily goal done. Anything extra now is a bonus." : `${P.goal - done} more question${P.goal - done === 1 ? "" : "s"} to hit today's goal.`}</p></div></div>
+      ${countdownHtml(true)}
 
       <div class="dash">
         <div class="card today">
@@ -360,6 +384,7 @@
         </div>
       </div>
 
+      ${weakSpotCard()}
       ${mustBanner()}
       <div class="actions">
         ${action("#/maths", "calc", "Maths trainer", "Endless calculations with worked answers", "t4")}
@@ -511,6 +536,11 @@
       const seen = new Set();
       while (items.length < 10) { const f = mathsItem("Which formula?"); if (!seen.has(f.q) || seen.size > 12) { seen.add(f.q); items.push(f); } }
       title = "Which formula?";
+    } else if (mode === "weak") {
+      const weak = topicStats().filter((x) => x.acc < 0.75).slice(0, 4);
+      const pool = weak.flatMap((x) => QB.all().filter((q) => q.unit === x.unit && q.topic === x.topic));
+      items = shuffle(pool).slice(0, 15).map(bankItem);
+      title = "Weak spots";
     } else if (mode === "must") {
       items = shuffle(QB.mustList()).map(bankItem);
       title = "Must-know";
@@ -798,6 +828,37 @@
     </div></div>`);
   }
 
+  // ------------------------------------------------------------------ weak spots
+  // Needs enough answers to be meaningful, then targets the topics with the lowest accuracy.
+  const WEAK_MIN = 80;
+  function topicStats() {
+    const t = {};
+    for (const q of QB.all()) {
+      const c = P.cards[q.id];
+      if (!c) continue;
+      const k = q.unit + "|" + q.topic;
+      t[k] ||= { unit: q.unit, topic: q.topic, r: 0, w: 0, ids: [] };
+      t[k].r += c.r; t[k].w += c.w; t[k].ids.push(q.id);
+    }
+    return Object.values(t).filter((x) => x.r + x.w >= 3).map((x) => ({ ...x, acc: x.r / (x.r + x.w) })).sort((a, b) => a.acc - b.acc);
+  }
+  function weakUnlocked() {
+    const units = new Set(Object.keys(P.cards).map((id) => id.split("-")[0]));
+    return P.answered >= WEAK_MIN && units.size >= 5;
+  }
+  function weakSpotCard() {
+    if (!weakUnlocked()) {
+      const left = Math.max(0, WEAK_MIN - P.answered);
+      return `<div class="weak-card locked"><span class="weak-ic">${icon("lock", 18)}</span><div><b>Weak-spot session</b>
+        <small>${left ? `Unlocks after ${left} more answer${left === 1 ? "" : "s"}` : "Unlocks once you've tried at least 5 units"}, so it has enough to go on.</small></div></div>`;
+    }
+    const weak = topicStats().filter((x) => x.acc < 0.75).slice(0, 4);
+    if (!weak.length) return `<div class="weak-card"><span class="weak-ic">${icon("check", 18)}</span><div><b>No weak spots right now</b><small>Every topic you've done is above 75%. Nice.</small></div></div>`;
+    return `<div class="weak-card"><span class="weak-ic">${icon("target", 18)}</span><div><b>Your weak spots</b>
+      <small>${weak.map((x) => `${esc(x.topic)} (${Math.round(x.acc * 100)}%)`).join(" · ")}</small></div>
+      <a class="btn btn-ink btn-sm" href="#/practice?mode=weak">Practise these</a></div>`;
+  }
+
   // ------------------------------------------------------------------ must-know
   const mustBanner = () => `<a class="must-banner" href="#/must-know"><span class="must-ic">${icon("star", 20)}</span>
     <span><b>Must-know for the capstone</b><small>${MUSTKNOW.length} facts our tutor says are very likely to come up</small></span>${icon("chevron", 18, "rail-go")}</a>`;
@@ -815,6 +876,49 @@
           <a href="#/learn/${u.id}?s=${f.s}">${icon("book", 15)}Read more</a></div>`;
       }).join("")}</div>
       <p class="dim small-note must-note">From our tutor's guidance in class. The real exam picks questions at random, so learn everything else too.</p>
+    </div></div>`);
+  }
+
+  // ------------------------------------------------------------------ resources
+  function resourcesPage() {
+    const LH = LEARN.LH;
+    const dl = (id) => `${LH}/mod/resource/view.php?id=${id}&redirect=1`;
+    const guides = [
+      ["32605", "Working safely in the electrical industry", 23135], ["32606", "Tools, fittings and plans", 23162],
+      ["32609", "Maths, conductors and insulators", 23187], ["32610", "Voltage, power, energy and DC circuits", 23209],
+      ["32611", "Magnetism and AC generation", 23233], ["32612", "Legislation, governance bodies and AS/NZS 3000", 23317],
+      ["32613", "Cords, cables and cable installation", 23358], ["750", "Test instruments", 23248],
+      ["29474", "Electrical fittings and components", 23264], ["30657", "Safe isolation", 23280],
+      ["30658", "Fundamental electrical safety", 23297], ["15848", "Electrical safeguards", 23330], ["15849", "Soldering", 23399],
+    ];
+    const row = (ic, title, sub, href, label) => `<a class="res-row" href="${href}" target="_blank" rel="noopener">
+      <span class="res-ic">${icon(ic, 18)}</span><span class="grow"><b>${esc(title)}</b><small>${esc(sub)}</small></span><span class="res-go">${label} ${icon("arrow", 15)}</span></a>`;
+    view(`<div class="page"><div class="wrap narrow">
+      <div class="page-head"><div><h1>Resources</h1><p class="muted">The documents you study from, all in one place.</p></div></div>
+
+      <a class="res-feature" href="https://www.ewrb.govt.nz/licences/licence-information/access-nz-standards-for-all-electrical-installations-and-appliances/" target="_blank" rel="noopener">
+        <span class="res-ic big">${icon("book", 24)}</span>
+        <span class="grow"><small class="overline-sm">Start here</small><b>AS/NZS 3000:2018, the Wiring Rules</b>
+        <small>Free to read for trainees through the EWRB. This is the edition the course assessments are based on.</small></span>
+        <span class="btn btn-primary">Get it free ${icon("arrow", 16)}</span></a>
+
+      <div class="card res-card"><div class="card-head"><h3>Learner guides (PDF)</h3><span class="muted">needs your LearningHive login</span></div>
+        <div class="res-list">${guides.map(([n, t, id]) => row("book", `US ${n}`, t, dl(id), "Download")).join("")}</div>
+        <p class="dim small-note">The 32614 learner guide isn't released on LearningHive yet.</p></div>
+
+      <div class="card res-card"><div class="card-head"><h3>Law and standards</h3></div>
+        <div class="res-list">
+          ${row("scales", "Electricity Act 1992", "legislation.govt.nz", "https://www.legislation.govt.nz/act/public/1992/0122/latest/DLM281858.html", "Open")}
+          ${row("scales", "Electricity (Safety) Regulations 2010", "legislation.govt.nz", "https://www.legislation.govt.nz/regulation/public/2010/0036/latest/DLM2763501.html", "Open")}
+          ${row("book", "NZ Standards for electrical workers", "EWRB free access page (AS/NZS 3000, 3008 and more)", "https://www.ewrb.govt.nz/licences/licence-information/access-nz-standards-for-all-electrical-installations-and-appliances/", "Open")}
+        </div></div>
+
+      <div class="card res-card"><div class="card-head"><h3>Course</h3><span class="muted">needs your LearningHive login</span></div>
+        <div class="res-list">
+          ${row("layers", "Course page", "4316 Electrical Engineering Pre-Trade", LEARN.course, "Open")}
+          ${row("book", "Trainee Handbook 2026", "PDF", dl(23109), "Download")}
+          ${row("clock", "Course calendar", "PDF", dl(23110), "Download")}
+        </div></div>
     </div></div>`);
   }
 
@@ -863,7 +967,7 @@
     }
   }
 
-  async function progressPage() {
+  function progressPage() {
     const days = [];
     for (let i = 27; i >= 0; i--) { const d = new Date(Date.now() - i * DAY); days.push([today(d), P.days[today(d)] || 0]); }
     view(`<div class="page"><div class="wrap">
@@ -879,22 +983,7 @@
       </div>
       <div class="section-title gap"><h2>Badges</h2><span class="muted">${Object.keys(P.badges).length} of ${BADGES.length}</span></div>
       <div class="badges">${BADGES.map((b) => `<div class="badge ${P.badges[b.id] ? "got" : ""}"><span class="bi">${icon(b.icon, 22)}</span><div><h4>${esc(b.name)}</h4><p>${esc(b.desc)}</p></div></div>`).join("")}</div>
-      ${STATIC ? "" : `<div class="section-title gap"><h2>Class leaderboard</h2></div>
-      <div class="card" id="board"><p class="muted">Loading…</p></div>`}
     </div></div>`);
-    if (STATIC) return;
-    try {
-      const r = await api("GET", "api/leaderboard");
-      const rows = r.data.board || [];
-      const me = user?.username;
-      $("#board").innerHTML = (rows.length ? `<table class="board"><thead><tr><th>#</th><th>Username</th><th>XP</th><th>Streak</th></tr></thead><tbody>${rows.map((x, i) =>
-        `<tr class="${x.username === me ? "me" : ""}"><td>${i + 1}</td><td>${esc(x.username)}</td><td class="n">${x.xp.toLocaleString()}</td><td class="n">${x.streak}</td></tr>`).join("")}</tbody></table>`
-        : `<p class="muted">No one's on the board yet.</p>`) +
-        (user ? `<label class="toggle board-toggle"><input type="checkbox" id="lb" ${P.settings.leaderboard ? "checked" : ""}><span class="sw"></span>Show me on the leaderboard</label>`
-              : `<p class="dim board-toggle"><a href="#/signup">Make an account</a> to join the board.</p>`);
-      const lb = $("#lb");
-      if (lb) lb.addEventListener("change", async () => { P.settings.leaderboard = lb.checked; save(); await pushProgress(); progressPage(); });
-    } catch { $("#board").innerHTML = `<p class="muted">Couldn't load the leaderboard.</p>`; }
   }
 
   // ------------------------------------------------------------------ account & auth
@@ -909,15 +998,12 @@
             <div class="chips">${[5, 10, 20, 30].map((n) => `<button class="chip ${P.goal === n ? "on" : ""}" data-act="goal" data-n="${n}">${n}</button>`).join("")}</div></div>
           <div class="row"><div class="grow"><p>Answer first</p><small>Hide the options until you've thought of the answer</small></div>
             <label class="toggle"><input type="checkbox" id="setAf" ${P.settings.answerFirst ? "checked" : ""}><span class="sw"></span></label></div>
-          <div class="row"><div class="grow"><p>Class leaderboard</p><small>Show your username, XP and streak to others</small></div>
-            <label class="toggle"><input type="checkbox" id="setLb" ${P.settings.leaderboard ? "checked" : ""}><span class="sw"></span></label></div>
         </div>
       </div>
       <div class="card"><div class="row"><div class="grow"><p>Sign out</p><small>Your progress is saved to your account</small></div>
         <button class="btn btn-ghost" data-act="logout">${icon("logout", 18)}Sign out</button></div></div>
     </div></div>`);
     $("#setAf").addEventListener("change", (e) => { P.settings.answerFirst = e.target.checked; save(); toast("Saved"); });
-    $("#setLb").addEventListener("change", (e) => { P.settings.leaderboard = e.target.checked; save(); toast("Saved"); });
   }
 
   function authPage(mode) {
@@ -1009,6 +1095,7 @@
       case "practice": return practice(params);
       case "exam": return examPage();
       case "must-know": return mustPage();
+      case "resources": return resourcesPage();
       case "learn": return seg[1] ? learnUnit(seg[1], params.get("s")) : learnHome();
       case "mistakes": return mistakesPage();
       case "progress": return progressPage();

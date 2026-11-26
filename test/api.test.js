@@ -54,8 +54,6 @@ test("sign up, save progress, log out, log back in", async () => {
   assert.equal(r.status, 200);
   assert.equal((await r.json()).progress.xp, 120);
 
-  r = await fetch(base + "/api/leaderboard");
-  assert.equal((await r.json()).board[0].username, "test.user");
 });
 
 test("wrong password, duplicate and invalid usernames are refused", async () => {
