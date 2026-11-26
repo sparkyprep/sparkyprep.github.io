@@ -900,8 +900,8 @@
       <a class="res-feature" href="https://www.ewrb.govt.nz/licences/licence-information/access-nz-standards-for-all-electrical-installations-and-appliances/" target="_blank" rel="noopener">
         <span class="res-ic big">${icon("book", 24)}</span>
         <span class="grow"><small class="overline-sm">Start here</small><b>AS/NZS 3000:2018, the Wiring Rules</b>
-        <small>Free to read for trainees through the EWRB. This is the edition the course assessments are based on.</small></span>
-        <span class="btn btn-primary">Get it free ${icon("arrow", 16)}</span></a>
+        <small>Free for trainees through the EWRB. The link opens their page; follow the steps there to get your own copy. This is the edition the course assessments use.</small></span>
+        <span class="btn btn-primary">Get it free from EWRB ${icon("arrow", 16)}</span></a>
 
       <div class="card res-card"><div class="card-head"><h3>Learner guides (PDF)</h3><span class="muted">needs your LearningHive login</span></div>
         <div class="res-list">${guides.map(([n, t, id]) => row("book", `US ${n}`, t, dl(id), "Download")).join("")}</div>
