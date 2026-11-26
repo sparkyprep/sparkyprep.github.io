@@ -1,0 +1,13 @@
+{
+  "name": "sparky-prep",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capstone revision for NZ electrical pre-trade students: quizzes, spaced repetition and a maths trainer.",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "DATA_FILE=.data/dev.json node server.js",
+    "test": "node --test"
+  }
+}
