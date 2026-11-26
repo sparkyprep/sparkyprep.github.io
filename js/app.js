@@ -23,6 +23,8 @@
   });
   let P = load();
   let user = null;
+  // No server (e.g. GitHub Pages): accounts are hidden and progress lives in this browser only
+  let STATIC = false;
   let saveTimer = null;
 
   function load() {
@@ -38,13 +40,14 @@
   async function pushProgress() {
     if (!user) return;
     try {
-      const r = await api("PUT", "/api/progress", { progress: P });
+      const r = await api("PUT", "api/progress", { progress: P });
       if (r.status === 401) { user = null; renderChrome(); }
     } catch {}
   }
   window.addEventListener("pagehide", () => { if (user && saveTimer) { clearTimeout(saveTimer); pushProgress(); } });
 
   async function api(method, url, body) {
+    if (STATIC) return { status: 0, ok: false, data: {} };
     const res = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined, credentials: "same-origin", keepalive: method === "PUT" });
     let data = {};
     try { data = await res.json(); } catch {}
@@ -146,7 +149,7 @@
 
   // ------------------------------------------------------------------ chrome (nav, footer, toast)
   function navLinks() {
-    if (!user && !P.answered) return [["#/", "Home", "bolt"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Units", "book"]];
+    if (!user && !P.answered && !STATIC) return [["#/", "Home", "bolt"], ["#/maths", "Maths trainer", "calc"], ["#/units", "Units", "book"]];
     return [["#/", "Dashboard", "chart"], ["#/units", "Units", "book"], ["#/maths", "Maths", "calc"], ["#/exam", "Mock exam", "clock"], ["#/progress", "Progress", "trophy"]];
   }
   function renderChrome() {
@@ -157,7 +160,10 @@
       return `<a href="${href}" class="${on ? "on" : ""}">${icon(ic, 18)}${label}</a>`;
     }).join("");
     const s = streakNow();
-    $("#navRight").innerHTML = user
+    $("#navRight").innerHTML = STATIC
+      ? `<span class="chip-stat streak ${s ? "hot" : ""}" title="Day streak">${icon("flame", 16)}${s}</span>
+         <span class="chip-stat xp" title="Experience points">${icon("star", 16)}${P.xp.toLocaleString()}</span>`
+      : user
       ? `<span class="chip-stat streak ${s ? "hot" : ""}" title="Day streak">${icon("flame", 16)}${s}</span>
          <span class="chip-stat xp" title="Experience points">${icon("star", 16)}${P.xp.toLocaleString()}</span>
          <a class="icon-btn" href="#/account" aria-label="Your account">${icon("user", 18)}</a>`
@@ -205,10 +211,11 @@
         <h1>Walk into your capstone <em>ready</em>.</h1>
         <p class="lede">Short daily practice across all 8 units. The questions you get wrong come back until they stick, and the maths trainer shows every step.</p>
         <div class="hero-ctas">
-          <a class="btn btn-primary btn-lg" href="#/signup">Create a free account ${icon("arrow", 18)}</a>
-          <a class="btn btn-ghost btn-lg" href="#/practice?mode=mixed">Try 10 questions</a>
+          ${STATIC ? `<a class="btn btn-primary btn-lg" href="#/practice?mode=review">Start practising ${icon("arrow", 18)}</a>
+          <a class="btn btn-ghost btn-lg" href="#/maths">Maths trainer</a>` : `<a class="btn btn-primary btn-lg" href="#/signup">Create a free account ${icon("arrow", 18)}</a>
+          <a class="btn btn-ghost btn-lg" href="#/practice?mode=mixed">Try 10 questions</a>`}
         </div>
-        <p class="hero-note">${icon("lock", 16)}Just a username and password. No email needed.</p>
+        <p class="hero-note">${icon("lock", 16)}${STATIC ? "No sign-up needed. Your progress saves in this browser." : "Just a username and password. No email needed."}</p>
       </div>
       <div class="preview" aria-hidden="true">
         <div class="preview-card">
@@ -254,15 +261,16 @@
       <div class="section-head"><p class="kicker">Questions</p><h2>Good to know</h2></div>
       <div class="faq">
         ${faq("Is this the real capstone?", "No. It's practice built from the course learner guides. The capstone is set by the industry body, so expect different questions on the same topics.")}
-        ${faq("Do I need an email?", "No, just a username and password. There's no email, which also means there's no password reset, so pick something you'll remember.")}
-        ${faq("Can I use it without an account?", "Yes. Your progress saves on this device. Make an account to keep it across your phone and laptop. Your progress comes with you when you sign up.")}
-        ${faq("Will other people see my results?", "Only if you turn on the class leaderboard in your account. It shows your username, XP and streak, nothing else.")}
+        ${STATIC ? faq("Where is my progress saved?", "In this browser on this device. Use the same browser each time. Clearing your browser data resets it. Accounts that sync across devices are coming.")
+          : faq("Do I need an email?", "No, just a username and password. There's no email, which also means there's no password reset, so pick something you'll remember.") +
+            faq("Can I use it without an account?", "Yes. Your progress saves on this device. Make an account to keep it across your phone and laptop. Your progress comes with you when you sign up.") +
+            faq("Will other people see my results?", "Only if you turn on the class leaderboard in your account. It shows your username, XP and streak, nothing else.")}
       </div>
     </div></section>
 
     <section class="band"><div class="wrap"><div class="cta-band">
       <div><h2>Ten questions a day is enough</h2><p>About five minutes. Do it every day and the spacing does the rest.</p></div>
-      <a class="btn btn-primary btn-lg" href="#/signup">Start now ${icon("arrow", 18)}</a>
+      <a class="btn btn-primary btn-lg" href="${STATIC ? "#/practice?mode=review" : "#/signup"}">Start now ${icon("arrow", 18)}</a>
     </div></div></section>`);
   }
   const faq = (q, a) => `<details><summary>${esc(q)}${icon("chevron", 18)}</summary><p>${esc(a)}</p></details>`;
@@ -694,11 +702,12 @@
       </div>
       <div class="section-title gap"><h2>Badges</h2><span class="muted">${Object.keys(P.badges).length} of ${BADGES.length}</span></div>
       <div class="badges">${BADGES.map((b) => `<div class="badge ${P.badges[b.id] ? "got" : ""}"><span class="bi">${icon(b.icon, 22)}</span><div><h4>${esc(b.name)}</h4><p>${esc(b.desc)}</p></div></div>`).join("")}</div>
-      <div class="section-title gap"><h2>Class leaderboard</h2></div>
-      <div class="card" id="board"><p class="muted">Loading…</p></div>
+      ${STATIC ? "" : `<div class="section-title gap"><h2>Class leaderboard</h2></div>
+      <div class="card" id="board"><p class="muted">Loading…</p></div>`}
     </div></div>`);
+    if (STATIC) return;
     try {
-      const r = await api("GET", "/api/leaderboard");
+      const r = await api("GET", "api/leaderboard");
       const rows = r.data.board || [];
       const me = user?.username;
       $("#board").innerHTML = (rows.length ? `<table class="board"><thead><tr><th>#</th><th>Username</th><th>XP</th><th>Streak</th></tr></thead><tbody>${rows.map((x, i) =>
@@ -763,7 +772,7 @@
       if (!username || !password) return err("Enter a username and password.");
       btn.disabled = true;
       try {
-        const r = await api("POST", isUp ? "/api/signup" : "/api/login", isUp ? { username, password, progress: P } : { username, password });
+        const r = await api("POST", isUp ? "api/signup" : "api/login", isUp ? { username, password, progress: P } : { username, password });
         if (!r.ok) { btn.disabled = false; return err(r.data.message || "Something went wrong. Try again."); }
         user = r.data.user;
         if (!isUp) { P = merge(P, r.data.progress); save(); await pushProgress(); }
@@ -775,7 +784,7 @@
 
   async function logout() {
     await pushProgress();
-    await api("POST", "/api/logout", {});
+    await api("POST", "api/logout", {});
     user = null;
     try { localStorage.removeItem(LS); } catch {}
     P = fresh();
@@ -822,9 +831,9 @@
       case "exam": return examPage();
       case "mistakes": return mistakesPage();
       case "progress": return progressPage();
-      case "account": return accountPage();
-      case "login": return authPage("login");
-      case "signup": return authPage("signup");
+      case "account": return STATIC ? go("#/") : accountPage();
+      case "login": return STATIC ? go("#/") : authPage("login");
+      case "signup": return STATIC ? go("#/") : authPage("signup");
       case "welcome": return landing();
       default: return go("#/");
     }
@@ -834,9 +843,10 @@
   (async function boot() {
     renderChrome();
     try {
-      const r = await api("GET", "/api/me");
-      if (r.data.user) { user = r.data.user; P = merge(P, r.data.progress); save(); }
-    } catch {}
+      const r = await api("GET", "api/me");
+      if (r.status === 404 || !("user" in r.data)) STATIC = true;
+      else if (r.data.user) { user = r.data.user; P = merge(P, r.data.progress); save(); }
+    } catch { STATIC = true; }
     route();
   })();
 })();
