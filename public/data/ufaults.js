@@ -77,3 +77,43 @@ QB.add("faults", [
    ["It's in good condition, it's been calibrated, and it's suitable for the reading", "It's top of the range, in company colours, and new", "It's digital, wireless and calibrated", "It's analogue, borrowed and tagged"],
    "Condition, calibration and suitability. Calibrate yearly.", "Test instruments"]
 ]);
+
+// Added after reading the LearningHive modules 1A, 1B and 2E. Appended so ids stay stable.
+QB.addMore("faults", [
+  ["Which statement about prospective short-circuit current (PSCC) is true?",
+   ["It's higher close to the power supply than further along the cables", "It's the same everywhere in an installation", "It's lower close to the transformer", "It only exists in DC circuits"],
+   "Cable resistance limits fault current, so the further from the supply, the lower the PSCC.", "Faults"],
+  ["Why can DC faults be more damaging than AC faults?",
+   ["AC passes through zero 100 times a second, which helps arcs go out; DC keeps pushing current", "DC voltage is always higher than AC", "DC can't be switched off", "AC has no current flow during a fault"],
+   "That's why DC switches need wider, more robust contacts and DC-rated equipment must be used.", "Faults"],
+  ["A solar PV isolation switch is off, but the sun is shining on the panels. What is true?",
+   ["The panels are still producing voltage", "The panels are dead and safe to touch", "The panels only produce voltage at night", "The panels produce voltage only if the inverter is on"],
+   "Light on the panels = output voltage. You can't switch the panels themselves off.", "Faults"],
+  ["A rewireable fuse's wire has parted neatly in the middle. What is the most likely cause?",
+   ["An overload", "A short circuit", "An open circuit in the load", "Reversed polarity"],
+   "Overload melts the middle of the wire. A short circuit usually blows the wire apart end to end.", "Faults"],
+  ["About how much current can a motor draw while it's starting?",
+   ["6 to 9 times its full-load running current", "Half its running current", "Exactly its running current", "100 times its running current"],
+   "Starting current is why several motors starting at once can overload a circuit.", "Faults"],
+  ["The phase touches the earthed metal case of a hot water cylinder. What does the earth wire do?",
+   ["Creates a low-impedance path back to neutral, so the protection trips quickly", "Stops any current flowing at all", "Makes the case live so the cylinder keeps working", "Reduces the supply voltage to a safe level"],
+   "It's a controlled short circuit via the MEN link. Without the earth, the case and pipes could stay live.", "Faults"],
+  ["How can you tell an RCD from a standard MCB on a switchboard?",
+   ["The RCD has a test button", "The RCD is always a different colour", "The RCD has a higher voltage rating", "The RCD is always bigger"],
+   "Look for the test button (often marked T).", "RCDs"],
+  ["What part of an RCD detects an imbalance between phase and neutral current?",
+   ["A sensing transformer", "A bimetal strip", "A fuse element", "A capacitor"],
+   "Phase and neutral pass through it. Balanced currents cancel; leakage leaves a field that trips the RCD.", "RCDs"],
+  ["A device on the switchboard has a test button and is marked C16 30mA. What is it?",
+   ["An RCBO: RCD plus overload and short-circuit protection", "An RCCB with no overload protection", "A standard MCB", "A rewireable fuse"],
+   "The curve letter (C) means it also has overload protection. An RCCB has no curve letter.", "RCDs"],
+  ["A socket outlet with a built-in RCD is called a…",
+   ["SRCD", "PRCD", "RCCB", "AFDD"],
+   "S = socket. A PRCD is the portable plug-in type.", "RCDs"],
+  ["What does an RCD's test button actually do?",
+   ["Connects a resistor that creates an imbalance, so the RCD should trip", "Resets the RCD after a fault", "Measures the installation's insulation resistance", "Turns off the earth connection"],
+   "Pressing it simulates a leakage. If it doesn't trip, the RCD is faulty.", "RCDs"],
+  ["What extra protection does AS/NZS 3000 call an RCD?",
+   ["Additional protection against electric shock", "Overload protection", "Short-circuit protection", "Arc fault protection"],
+   "Circuit breakers protect cables. RCDs are added mainly to protect people and animals.", "RCDs"]
+]);
